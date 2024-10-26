@@ -15,7 +15,7 @@ const exploreRoutes = require('./routes/exploreRoutes'); // Import explore route
 const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 8080;
 
 // Apply security headers
 app.use(securityHeaders);
