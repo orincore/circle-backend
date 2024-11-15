@@ -21,4 +21,10 @@ router.get("/:uniqueId/posts", authenticate, profileController.getUserPosts);
 // **Other Users' Routes**
 router.get("/:uniqueId", authenticate, profileController.getUserProfileById); // Fetch another user's profile by uniqueId
 
+router.post(
+  "/picture",
+  authenticate,
+  upload.single("profilePicture"), // Key in form-data must be "profilePicture"
+  profileController.updateProfilePicture
+);
 module.exports = router;
