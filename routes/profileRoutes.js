@@ -16,6 +16,8 @@ router.post("/me/toggle-follow", authenticate, profileController.toggleFollow); 
 // **Activity Feed**
 router.get("/feed/activity", authenticate, profileController.getActivityFeed); // Get posts from followed users
 
+router.get("/:uniqueId/posts", authenticate, profileController.getUserPosts);
+
 // **Other Users' Routes**
 router.get("/:uniqueId", authenticate, profileController.getUserProfileById); // Fetch another user's profile by uniqueId
 
