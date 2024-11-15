@@ -105,6 +105,47 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+const updateProfilePicture = async (req, res) => {
+  try {
+    const { uniqueId } = req.user; // User's unique ID from the authentication middleware
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ error: "Profile picture file is required." });
+    }
+
+    // Upload the new picture to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+      folder: "profile_pictures",
+      public_id: uniqueId,
+      overwrite: true,
+    });
+
+    const newProfilePictureUrl = uploadResult.secure_url;
+
+    // Update the user's profile picture in the database
+    const updateQuery = `
+      UPDATE users
+      SET profile_picture = $1
+      WHERE unique_id = $2
+      RETURNING profile_picture;
+    `;
+
+    const result = await pool.query(updateQuery, [newProfilePictureUrl, uniqueId]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    res.status(200).json({
+      message: "Profile picture updated successfully.",
+      profilePicture: result.rows[0].profile_picture,
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({ error: "Server error." });
+  }
+};
+
 // **3. Fetch Another User's Profile**
 const getUserProfileById = async (req, res) => {
   try {
@@ -241,4 +282,5 @@ module.exports = {
   toggleFollow,
   getActivityFeed,
   getUserPosts,
+  updateProfilePicture,
 };
