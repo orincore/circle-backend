@@ -143,6 +143,42 @@ const getUserProfileById = async (req, res) => {
   }
 };
 
+const getUserPosts = async (req, res) => {
+  try {
+    const { uniqueId } = req.params;
+
+    const query = `
+      SELECT 
+        p.id AS post_id, 
+        p.text, 
+        p.media, 
+        p.post_type, 
+        p.aspect_ratio, 
+        p.created_at, 
+        u.username, 
+        u.profile_picture,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+        (SELECT COUNT(*) FROM shares WHERE post_id = p.id) AS shares_count
+      FROM posts p
+      INNER JOIN users u ON p.user_id = u.id
+      WHERE u.unique_id = $1
+      ORDER BY p.created_at DESC;
+    `;
+
+    const result = await pool.query(query, [uniqueId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No posts found for this user." });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching user posts:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // **4. Toggle Follow**
 const toggleFollow = async (req, res) => {
   try {
@@ -204,4 +240,5 @@ module.exports = {
   updateUserProfile,
   toggleFollow,
   getActivityFeed,
+  getUserPosts,
 };
