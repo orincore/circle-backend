@@ -225,3 +225,102 @@ exports.randomGroupChat = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+const joinLivePool = async (req, res) => {
+  const { userId, interests } = req.body;
+
+  try {
+    // Insert or update the user's live status
+    const query = `
+      INSERT INTO live_users (user_id, interests, is_available, last_active)
+      VALUES ($1, $2, TRUE, NOW())
+      ON CONFLICT (user_id)
+      DO UPDATE SET is_available = TRUE, last_active = NOW(), interests = EXCLUDED.interests;
+    `;
+    await pool.query(query, [userId, interests]);
+
+    res.status(200).json({ message: 'User added to live pool' });
+  } catch (error) {
+    console.error('Error adding user to live pool:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const matchUser = async (req, res) => {
+  const { userId, interests } = req.body;
+
+  try {
+    // Find a match
+    const matchQuery = `
+      SELECT * FROM live_users
+      WHERE user_id != $1 AND is_available = TRUE AND interests && $2::text[]
+      ORDER BY last_active ASC LIMIT 1;
+    `;
+    const match = await pool.query(matchQuery, [userId, interests]);
+
+    if (match.rowCount === 0) {
+      return res.status(404).json({ message: 'No match found at the moment' });
+    }
+
+    const matchedUser = match.rows[0];
+
+    // Create a chat session
+    const createChatQuery = `
+      INSERT INTO chat_sessions (participants, is_group, interests, is_random, created_at)
+      VALUES (ARRAY[$1, $2]::uuid[], FALSE, $3, TRUE, NOW())
+      RETURNING *;
+    `;
+    const chatSession = await pool.query(createChatQuery, [userId, matchedUser.user_id, interests]);
+
+    // Update availability
+    const updateQuery = `
+      UPDATE live_users SET is_available = FALSE WHERE user_id IN ($1, $2);
+    `;
+    await pool.query(updateQuery, [userId, matchedUser.user_id]);
+
+    res.status(201).json({ message: 'Matched successfully', chatSession: chatSession.rows[0] });
+  } catch (error) {
+    console.error('Error in matching user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const matchGroup = async (req, res) => {
+  const { userId, interests } = req.body;
+
+  try {
+    // Find matching users
+    const matchQuery = `
+      SELECT * FROM live_users
+      WHERE user_id != $1 AND is_available = TRUE AND interests && $2::text[]
+      ORDER BY last_active ASC LIMIT 9;
+    `;
+    const matches = await pool.query(matchQuery, [userId, interests]);
+
+    if (matches.rowCount === 0) {
+      return res.status(404).json({ message: 'No group found at the moment' });
+    }
+
+    const participantIds = matches.rows.map((user) => user.user_id);
+
+    // Create a group chat session
+    const createGroupQuery = `
+      INSERT INTO chat_sessions (participants, is_group, interests, max_participants, is_random, created_at)
+      VALUES (ARRAY[$1 || $2]::uuid[], TRUE, $3, 10, TRUE, NOW())
+      RETURNING *;
+    `;
+    const groupChat = await pool.query(createGroupQuery, [userId, participantIds, interests]);
+
+    // Update availability
+    const updateQuery = `
+      UPDATE live_users SET is_available = FALSE WHERE user_id = ANY($1);
+    `;
+    await pool.query(updateQuery, [[userId, ...participantIds]]);
+
+    res.status(201).json({ message: 'Group created successfully', chatSession: groupChat.rows[0] });
+  } catch (error) {
+    console.error('Error creating group chat:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
