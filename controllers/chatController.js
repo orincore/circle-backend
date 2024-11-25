@@ -226,7 +226,7 @@ exports.randomGroupChat = async (req, res) => {
   }
 };
 
-const joinLivePool = async (req, res) => {
+export.joinLivePool = async (req, res) => {
   const { userId, interests } = req.body;
 
   try {
@@ -246,7 +246,7 @@ const joinLivePool = async (req, res) => {
   }
 };
 
-const matchUser = async (req, res) => {
+export.matchUser = async (req, res) => {
   const { userId, interests } = req.body;
 
   try {
@@ -285,7 +285,7 @@ const matchUser = async (req, res) => {
   }
 };
 
-const matchGroup = async (req, res) => {
+export.matchGroup = async (req, res) => {
   const { userId, interests } = req.body;
 
   try {
