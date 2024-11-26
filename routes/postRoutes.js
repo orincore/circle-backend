@@ -38,7 +38,4 @@ router.get("/saved", authenticate, postController.getSavedPosts);
 router.post("/report/:postId", authenticate, postController.reportPost);
 router.get("/reports", authenticate, isAdmin, postController.getReports);
 
-// Schedule Post
-router.post("/schedule", authenticate, postController.schedulePost);
-
 module.exports = router;
