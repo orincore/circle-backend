@@ -2,6 +2,9 @@ const express = require('express');
 const chatController = require('../controllers/chatController');
 const { authenticate } = require('../middleware/authMiddleware'); // Authentication middleware
 const multer = require('multer');
+const { joinLivePool } = require('../controllers/chatController');
+const { matchUser } = require('../controllers/chatController');
+const { matchGroup } = require('../controllers/chatController');
 
 // Define a router
 const router = express.Router();
