@@ -359,58 +359,6 @@ const getReports = async (req, res) => {
   }
 };
 
-// Schedule a Post
-const schedulePost = async (req, res) => {
-  const { postType, text, aspectRatio, scheduledAt, interests } = req.body;
-
-  try {
-    const userId = req.user.id;
-    const uniqueId = uuidv4();
-
-    await pool.query(
-      `INSERT INTO scheduled_posts (user_id, post_type, text, media, aspect_ratio, interests, scheduled_at)
-      VALUES ($1, $2, $3, NULL, $4, $5, $6);`,
-      [userId, postType, text, aspectRatio, interests, scheduledAt]
-    );
-
-    res.status(201).json({ message: "Post scheduled successfully." });
-  } catch (error) {
-    console.error("Error scheduling post:", error);
-    res.status(500).json({ error: "Server error." });
-  }
-};
-
-// Publish Scheduled Posts
-nodeCron.schedule("* * * * *", async () => {
-  const now = new Date();
-  const query = `
-    SELECT * FROM scheduled_posts
-    WHERE scheduled_at <= $1;
-  `;
-
-  const result = await pool.query(query, [now]);
-
-  for (const post of result.rows) {
-    await pool.query(
-      `INSERT INTO posts (user_id, unique_id, post_type, text, media, aspect_ratio, interests, created_at)
-      VALUES ($1, $2, $3, $4, NULL, $5, $6, NOW());`,
-      [
-        post.user_id,
-        uuidv4(),
-        post.post_type,
-        post.text,
-        post.aspect_ratio,
-        post.interests,
-      ]
-    );
-    await notificationService.send(
-      post.user_id,
-      "Your scheduled post has been published successfully!"
-    );    
-
-    await pool.query(`DELETE FROM scheduled_posts WHERE id = $1;`, [post.id]);
-  }
-});
 
 module.exports = {
   uploadMiddleware,
@@ -424,7 +372,6 @@ module.exports = {
   deletePost,
   getCommentsForPost,
   deleteComment,
-  schedulePost,
   getReports,
   savePost,
 };
