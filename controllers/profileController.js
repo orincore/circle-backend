@@ -187,6 +187,10 @@ const getUserProfileById = async (req, res) => {
 const getUserPosts = async (req, res) => {
   try {
     const { uniqueId } = req.params;
+    const { page = 1, limit = 10 } = req.query; // Default to page 1, limit 10
+
+    // Calculate offset for pagination
+    const offset = (page - 1) * limit;
 
     const query = `
       SELECT 
@@ -204,16 +208,19 @@ const getUserPosts = async (req, res) => {
       FROM posts p
       INNER JOIN users u ON p.user_id = u.id
       WHERE u.unique_id = $1
-      ORDER BY p.created_at DESC;
+      ORDER BY p.created_at DESC
+      LIMIT $2 OFFSET $3;
     `;
 
-    const result = await pool.query(query, [uniqueId]);
+    // Execute the query with pagination parameters
+    const result = await pool.query(query, [uniqueId, limit, offset]);
 
+    // Check if any posts were found
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No posts found for this user." });
+      return res.status(200).json({ posts: [], message: "No more posts available." });
     }
 
-    res.status(200).json(result.rows);
+    res.status(200).json({ posts: result.rows });
   } catch (error) {
     console.error("Error fetching user posts:", error);
     res.status(500).json({ message: "Server error" });
